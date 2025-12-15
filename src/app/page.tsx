@@ -35,6 +35,8 @@ export default function Home() {
   const [hits, setHits] = useState(0);
   const [target, setTarget] = useState<Target>(() => randomTarget());
   const [revealed, setRevealed] = useState(false);
+  const [showQuestion, setShowQuestion] = useState(false);
+  const [quizError, setQuizError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(
     "¡Dispará al adorno! Cuando aciertes las suficientes veces, se revela el Amigo Invisible."
   );
@@ -45,6 +47,8 @@ export default function Home() {
     setHits(0);
     setTarget(randomTarget());
     setRevealed(false);
+    setShowQuestion(false);
+    setQuizError(null);
     setMessage(
       "¡Dispará al adorno! Cuando aciertes las suficientes veces, se revela el Amigo Invisible."
     );
@@ -56,11 +60,13 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!revealed && hits >= REQUIRED_HITS) {
-      setRevealed(true);
-      setMessage("¡La rompiste! Tu Amigo Invisible es...");
+    if (!showQuestion && !revealed && hits >= REQUIRED_HITS) {
+      setShowQuestion(true);
+      setMessage(
+        "¡La rompiste a tiros! Antes de revelar el nombre, respondé esta pregunta."
+      );
     }
-  }, [hits, revealed]);
+  }, [hits, showQuestion, revealed]);
 
   // Move target continuously to make it harder
   useEffect(() => {
@@ -120,7 +126,7 @@ export default function Home() {
   }, [bulletsLeft, revealed]);
 
   const handleShoot = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (bulletsLeft <= 0 || revealed) return;
+    if (bulletsLeft <= 0 || revealed || showQuestion) return;
     if (!areaRef.current) return;
 
     setBulletsLeft((prev) => prev - 1);
@@ -147,9 +153,9 @@ export default function Home() {
         // 2+ aciertos -> velocidad 2
         let targetSpeed = BASE_SPEED;
         if (nextHits === 1) {
-          targetSpeed = 1;
+          targetSpeed = targetSpeed * 2;
         } else if (nextHits >= 2) {
-          targetSpeed = 2;
+          targetSpeed = targetSpeed * 4;
         }
 
         setMessage("¡Le pegaste! El objetivo ahora va más rápido.");
@@ -171,6 +177,28 @@ export default function Home() {
   };
 
   const gameOver = bulletsLeft === 0 && !revealed;
+
+  const handleAnswer = (answer: "boca" | "river" | "sacachispas") => {
+    if (answer === "boca") {
+      setQuizError(null);
+      setShowQuestion(false);
+      setRevealed(true);
+      setMessage(
+        "¡Respuesta correcta! Boca es el que más Libertadores ganó en el siglo XXI."
+      );
+    } else {
+      // Respuesta incorrecta: reiniciamos la parte de disparos para que tenga que volver a acertar
+      setQuizError(null);
+      setShowQuestion(false);
+      setRevealed(false);
+      setBulletsLeft(BULLETS);
+      setHits(0);
+      setTarget(randomTarget());
+      setMessage(
+        "Respuesta incorrecta. Volvés a la fase de disparos, ¡a ver si esta vez estudiás historia de la Copa!"
+      );
+    }
+  };
 
   if (!mounted) {
     return null;
@@ -236,9 +264,9 @@ export default function Home() {
               )}
 
               {/* overlays */}
-              {(gameOver || revealed) && (
+              {(gameOver || revealed || showQuestion) && (
                 <div className="overlay">
-                  {gameOver && !revealed && (
+                  {gameOver && !revealed && !showQuestion && (
                     <>
                       <p className="overlay-title loss">¡Te quedaste sin balas!</p>
                       <p className="overlay-text">
@@ -251,7 +279,70 @@ export default function Home() {
                       </p>
                     </>
                   )}
-                  {revealed && (
+                  {showQuestion && !revealed && (
+                    <>
+                      <p className="overlay-title win">
+                        Pregunta final para revelar el Amigo Invisible
+                      </p>
+                      <p className="overlay-text">
+                        ¿Qué equipo tiene más Copas Libertadores de América en el
+                        siglo XXI?
+                      </p>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center", marginTop: "0.25rem" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleAnswer("boca")}
+                          style={{
+                            padding: "0.3rem 0.9rem",
+                            borderRadius: "999px",
+                            border: "1px solid rgba(148,163,184,0.8)",
+                            background: "rgba(15,23,42,0.9)",
+                            color: "#e5e7eb",
+                            fontSize: "0.75rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Boca
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAnswer("river")}
+                          style={{
+                            padding: "0.3rem 0.9rem",
+                            borderRadius: "999px",
+                            border: "1px solid rgba(148,163,184,0.5)",
+                            background: "rgba(15,23,42,0.85)",
+                            color: "#e5e7eb",
+                            fontSize: "0.75rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          River
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAnswer("sacachispas")}
+                          style={{
+                            padding: "0.3rem 0.9rem",
+                            borderRadius: "999px",
+                            border: "1px solid rgba(148,163,184,0.5)",
+                            background: "rgba(15,23,42,0.85)",
+                            color: "#e5e7eb",
+                            fontSize: "0.75rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Sacachispas
+                        </button>
+                      </div>
+                      {quizError && (
+                        <p className="overlay-sub" style={{ marginTop: "0.35rem" }}>
+                          {quizError}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {revealed && !showQuestion && (
                     <>
                       <p className="overlay-title win">
                         ¡Se reveló el Amigo Invisible!

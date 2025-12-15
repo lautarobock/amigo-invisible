@@ -215,7 +215,6 @@ body {
   justify-content: center;
   background: rgba(2, 6, 23, 0.78);
   backdrop-filter: blur(6px);
-  pointer-events: none;
   text-align: center;
 }
 
